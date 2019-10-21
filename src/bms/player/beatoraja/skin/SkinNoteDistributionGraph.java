@@ -1,20 +1,20 @@
 package bms.player.beatoraja.skin;
 
-import bms.model.*;
-import bms.player.beatoraja.MainState;
-import bms.player.beatoraja.play.BMSPlayer;
-import bms.player.beatoraja.skin.Skin.SkinObjectRenderer;
-import bms.player.beatoraja.song.SongData;
-
 import java.util.Arrays;
 
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 
+import bms.model.*;
+import bms.player.beatoraja.MainState;
+import bms.player.beatoraja.play.BMSPlayer;
+import bms.player.beatoraja.skin.Skin.SkinObjectRenderer;
+import bms.player.beatoraja.song.SongData;
+
 /**
  * ノーツ分布を表示するグラフ
- * 
+ *
  * @author exch
  */
 public class SkinNoteDistributionGraph extends SkinObject {
@@ -64,12 +64,12 @@ public class SkinNoteDistributionGraph extends SkinObject {
 
 	private int max = 20;
 
-	private int type;
+	private int graphType;
 
-	public static final int TYPE_NORMAL = 0;
+	public static final int TYPE_NOTETYPE = 0;
 	public static final int TYPE_JUDGE = 1;
 	public static final int TYPE_EARLYLATE = 2;
-	
+
 	private static final int[] DATA_LENGTH = {7, 6, 10};
 
 	private boolean isBackTexOff = false;
@@ -81,7 +81,7 @@ public class SkinNoteDistributionGraph extends SkinObject {
 	 * 処理済みノート数 プレイ時は処理済みノート数に変化があった時だけ更新する
 	 */
 	private int pastNotes = 0;
-	
+
 	private int starttime;
 	private int endtime;
 	private float freq;
@@ -90,16 +90,16 @@ public class SkinNoteDistributionGraph extends SkinObject {
 	private static final Color TRANSPARENT_COLOR = Color.valueOf("00000000");
 
 	public SkinNoteDistributionGraph() {
-		this(TYPE_NORMAL, 500, 0, 0, 0);
+		this(TYPE_NOTETYPE, 500, 0, 0, 0);
 	}
 
 	public SkinNoteDistributionGraph(int type, int delay, int backTexOff, int orderReverse, int noGap) {
 		this(null, type, delay, backTexOff, orderReverse, noGap);
 	}
-	
+
 	public SkinNoteDistributionGraph(Pixmap[] chips, int type, int delay, int backTexOff, int orderReverse, int noGap) {
 		this.chips = chips;
-		this.type = type;
+		this.graphType = type;
 		this.isBackTexOff = backTexOff == 1;
 		this.delay = delay;
 		this.isOrderReverse = orderReverse == 1;
@@ -120,13 +120,13 @@ public class SkinNoteDistributionGraph extends SkinObject {
 		bp.dispose();
 
 	}
-	
+
 	public void prepare(long time, MainState state) {
 		prepare(time, state, null, -1, -1, -1);
 	}
 
 	public void prepare(long time, MainState state, Rectangle r, int starttime, int endtime, float freq) {
-		super.prepare(time, state);			
+		super.prepare(time, state);
 		if(r != null) {
 			region.set(r);
 			draw = true;
@@ -138,15 +138,15 @@ public class SkinNoteDistributionGraph extends SkinObject {
 		render = time >= delay ? 1.0f : (float) time / delay;
 	}
 
-	public void draw(SkinObjectRenderer sprite) {	
-		
+	public void draw(SkinObjectRenderer sprite) {
+
 		final SongData song = state.main.getPlayerResource().getSongdata();
 		final BMSModel model = song != null ? song.getBMSModel() : null;
-		
+
 		// TODO スキン定義側で分岐できないか？
 		if(chips == null) {
-			Color[] graphcolor = type != TYPE_NORMAL && model != null && model.getMode() == Mode.POPN_9K  ? 
-					pmsGraphColor[type] : JGRAPH[type];
+			Color[] graphcolor = graphType != TYPE_NOTETYPE && model != null && model.getMode() == Mode.POPN_9K  ?
+					pmsGraphColor[graphType] : JGRAPH[graphType];
 			chips = new Pixmap[graphcolor.length];
 			for(int i = 0;i < graphcolor.length;i++) {
 				chips[i] = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
@@ -157,8 +157,8 @@ public class SkinNoteDistributionGraph extends SkinObject {
 		if(song != current || (this.model == null && model != null)) {
 			current = song;
 			this.model = model;
-			if(type == TYPE_NORMAL && song != null && song.getInformation() != null) {
-				updateGraph(song.getInformation().getDistributionValues());				
+			if(graphType == TYPE_NOTETYPE && song != null && song.getInformation() != null) {
+				updateGraph(song.getInformation().getDistributionValues());
 			} else {
 				updateGraph(model);
 			}
@@ -168,11 +168,13 @@ public class SkinNoteDistributionGraph extends SkinObject {
 		}
 
 		//プレイ時、判定をリアルタイムで更新する
-		if(model != null && state instanceof BMSPlayer && type != TYPE_NORMAL && pastNotes != ((BMSPlayer)state).getPastNotes()) {
+		if(model != null && state instanceof BMSPlayer && graphType != TYPE_NOTETYPE && pastNotes != ((BMSPlayer)state).getPastNotes()) {
 			pastNotes = ((BMSPlayer)state).getPastNotes();
 			// TODO さらなる高速化のアイデア-BMSPlayerから更新したノーツの時間だけを渡し。指定時間のデータ/イメージのみ更新する
+			long before = System.nanoTime();
 			updateData(model);
 			updateTexture();
+			System.out.println(((System.nanoTime() - before)/1000.0));
 		}
 
 		draw(sprite, backtex, region.x, region.y + region.height, region.width, -region.height);
@@ -198,7 +200,7 @@ public class SkinNoteDistributionGraph extends SkinObject {
 			sprite.draw(nowcursor, region.x + dx, region.y, 1, region.height);
 		}
 	}
-	
+
 	public void draw(SkinObjectRenderer sprite, long time, MainState state, Rectangle r, int starttime, int endtime, float freq) {
 		prepare(time, state, r, starttime, endtime, freq);
 		if(draw) {
@@ -222,19 +224,19 @@ public class SkinNoteDistributionGraph extends SkinObject {
 		updateTexture();
 	}
 
-	
+
 	private void updateGraph(BMSModel model) {
 		if (model == null) {
-			data = new int[0][DATA_LENGTH[type]];
+			data = new int[0][DATA_LENGTH[graphType]];
 		} else {
-			data = new int[model.getLastTime() / 1000 + 1][DATA_LENGTH[type]];
-			
+			data = new int[model.getLastTime() / 1000 + 1][DATA_LENGTH[graphType]];
+
 			updateData(model);
 		}
-		
+
 		updateTexture();
 	}
-	
+
 	private void updateData(BMSModel model) {
 		int pos = -1;
 		int count = 0;
@@ -254,15 +256,15 @@ public class SkinNoteDistributionGraph extends SkinObject {
 					max = Math.min((count / 10) * 10 + 10, 100);
 				}
 				pos = index;
-				count = type == TYPE_NORMAL ? data[index][1] + data[index][4] : 0;
+				count = graphType == TYPE_NOTETYPE ? data[index][1] + data[index][4] : 0;
 			}
 			for (int i = 0; i < mode.key; i++) {
 				Note n = tl.getNote(i);
 				if (n != null) {
 					final int st = n.getState();
 					final int t = n.getPlayTime();
-					switch (type) {
-					case TYPE_NORMAL:
+					switch (graphType) {
+					case TYPE_NOTETYPE:
 						if (n instanceof NormalNote) {
 							data[index][mode.isScratchKey(i) ? 2 : 5]++;
 							count++;
@@ -277,7 +279,7 @@ public class SkinNoteDistributionGraph extends SkinObject {
 							if((model.getLntype() == BMSModel.LNTYPE_LONGNOTE && n instanceof LongNote
 									&& ((LongNote) n).isEnd())) {
 								data[index][mode.isScratchKey(i) ? 0 : 3]++;
-								data[index][mode.isScratchKey(i) ? 1 : 4]--;									
+								data[index][mode.isScratchKey(i) ? 1 : 4]--;
 							}
 						}
 						if (n instanceof MineNote) {
@@ -305,13 +307,13 @@ public class SkinNoteDistributionGraph extends SkinObject {
 						}
 						count++;
 						break;
-					}							 
+					}
 				}
 			}
 		}
 
 	}
-	
+
 	private void updateTexture() {
 		if (shapetex != null && !(state instanceof BMSPlayer)) {
 			shapetex.getTexture().dispose();
